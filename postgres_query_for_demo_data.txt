@@ -1,0 +1,499 @@
+ select * from products
+
+ select * from user_interactions 
+
+ SELECT * FROM users;
+
+SELECT * FROM influencer_posts;
+
+
+SELECT * FROM product_views;
+
+SELECT * FROM product_purchases;
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+
+ CREATE TABLE influencers (
+    influencer_id SERIAL PRIMARY KEY,
+    influencer_name VARCHAR(255) NOT NULL,
+    follower_count INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE users (
+    user_id SERIAL PRIMARY KEY,    -- Automatically increments
+    username VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,    -- Automatically increments
+    product_name VARCHAR(255) NOT NULL,
+    category VARCHAR(255),
+    tags VARCHAR(255),    -- Can store comma-separated or JSON format
+    price DECIMAL(10, 2) NOT NULL,
+    brand VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE user_interactions (
+    user_id INT NOT NULL,
+    product_id INT NOT NULL,
+    interaction_type VARCHAR(50) NOT NULL,   -- 'view', 'purchase', 'like', 'comment'
+    interaction_count INT DEFAULT 1,         -- Tracks repeated interactions, useful for views or purchases
+    comment_text TEXT,                       -- Optional, used only if interaction_type is 'comment'
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, product_id, interaction_type),  -- Composite key to ensure unique interaction per type
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+
+CREATE TABLE influencer_posts (
+    post_id SERIAL PRIMARY KEY,
+    product_id INT,                         -- Product promoted by the influencer
+    influencer_id INT,                      -- Reference to the influencer (could reference an `influencers` table if you have one)
+    post_text TEXT,                         -- Content of the post
+    post_likes INT DEFAULT 0,               -- Number of likes on the post
+    post_comments INT DEFAULT 0,            -- Number of comments on the post
+    post_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+
+CREATE TABLE product_views (
+    product_id INT NOT NULL,
+    user_id INT NOT NULL,
+    view_count INT DEFAULT 1,                 -- Tracks how many times the user has viewed the product
+    last_viewed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (product_id, user_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+
+CREATE TABLE product_purchases (
+    product_id INT NOT NULL,
+    user_id INT NOT NULL,
+    purchase_count INT DEFAULT 1,             -- Tracks how many times the user has purchased the product
+    last_purchased TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (product_id, user_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+
+-- Insert 100 users for testing
+DO $$
+BEGIN
+    FOR i IN 1..100 LOOP
+        INSERT INTO users (username, email, password)
+        VALUES (
+            'user_' || i, -- Username: user_1, user_2, ..., user_100
+            'user_' || i || '@example.com', -- Email: user_1@example.com, ..., user_100@example.com
+            'password_' || i -- Password: password_1, password_2, ..., password_100
+        );
+    END LOOP;
+END $$;
+
+
+
+-- Insert 50 products for each of the 20 categories
+
+-- Electronics
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 1', 'Electronics', 'tag1', 59.99, 'Brand Electronics'),
+('Product 2', 'Electronics', 'tag2', 45.50, 'Brand Electronics'),
+('Product 3', 'Electronics', 'tag3', 79.99, 'Brand Electronics'),
+-- Add more products until 'Product 50'
+('Product 50', 'Electronics', 'tag50', 35.00, 'Brand Electronics');
+
+-- Clothing
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 51', 'Clothing', 'tag1', 29.99, 'Brand Clothing'),
+('Product 52', 'Clothing', 'tag2', 49.99, 'Brand Clothing'),
+('Product 53', 'Clothing', 'tag3', 19.99, 'Brand Clothing'),
+-- Add more products until 'Product 100'
+('Product 100', 'Clothing', 'tag50', 39.99, 'Brand Clothing');
+
+-- Home Appliances
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 101', 'Home Appliances', 'tag1', 89.99, 'Brand Home Appliances'),
+('Product 102', 'Home Appliances', 'tag2', 149.50, 'Brand Home Appliances'),
+-- Add more products until 'Product 150'
+('Product 150', 'Home Appliances', 'tag50', 75.00, 'Brand Home Appliances');
+
+-- Toys
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 151', 'Toys', 'tag1', 15.99, 'Brand Toys'),
+('Product 152', 'Toys', 'tag2', 25.50, 'Brand Toys'),
+-- Add more products until 'Product 200'
+('Product 200', 'Toys', 'tag50', 22.00, 'Brand Toys');
+
+-- Books
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 201', 'Books', 'tag1', 9.99, 'Brand Books'),
+('Product 202', 'Books', 'tag2', 19.99, 'Brand Books'),
+-- Add more products until 'Product 250'
+('Product 250', 'Books', 'tag50', 12.50, 'Brand Books');
+
+-- Sports
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 251', 'Sports', 'tag1', 45.99, 'Brand Sports'),
+('Product 252', 'Sports', 'tag2', 65.00, 'Brand Sports'),
+-- Add more products until 'Product 300'
+('Product 300', 'Sports', 'tag50', 30.50, 'Brand Sports');
+
+-- Beauty
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 301', 'Beauty', 'tag1', 19.99, 'Brand Beauty'),
+('Product 302', 'Beauty', 'tag2', 24.99, 'Brand Beauty'),
+-- Add more products until 'Product 350'
+('Product 350', 'Beauty', 'tag50', 29.00, 'Brand Beauty');
+
+-- Automotive
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 351', 'Automotive', 'tag1', 199.99, 'Brand Automotive'),
+('Product 352', 'Automotive', 'tag2', 450.00, 'Brand Automotive'),
+-- Add more products until 'Product 400'
+('Product 400', 'Automotive', 'tag50', 120.00, 'Brand Automotive');
+
+-- Furniture
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 401', 'Furniture', 'tag1', 150.99, 'Brand Furniture'),
+('Product 402', 'Furniture', 'tag2', 499.00, 'Brand Furniture'),
+-- Add more products until 'Product 450'
+('Product 450', 'Furniture', 'tag50', 249.99, 'Brand Furniture');
+
+-- Food
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 451', 'Food', 'tag1', 4.99, 'Brand Food'),
+('Product 452', 'Food', 'tag2', 7.50, 'Brand Food'),
+-- Add more products until 'Product 500'
+('Product 500', 'Food', 'tag50', 9.00, 'Brand Food');
+
+-- Health
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 501', 'Health', 'tag1', 29.99, 'Brand Health'),
+('Product 502', 'Health', 'tag2', 19.00, 'Brand Health'),
+-- Add more products until 'Product 550'
+('Product 550', 'Health', 'tag50', 22.50, 'Brand Health');
+
+-- Music
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 551', 'Music', 'tag1', 15.99, 'Brand Music'),
+('Product 552', 'Music', 'tag2', 30.50, 'Brand Music'),
+-- Add more products until 'Product 600'
+('Product 600', 'Music', 'tag50', 25.00, 'Brand Music');
+
+-- Movies
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 601', 'Movies', 'tag1', 14.99, 'Brand Movies'),
+('Product 602', 'Movies', 'tag2', 18.50, 'Brand Movies'),
+-- Add more products until 'Product 650'
+('Product 650', 'Movies', 'tag50', 22.00, 'Brand Movies');
+
+-- Gadgets
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 651', 'Gadgets', 'tag1', 99.99, 'Brand Gadgets'),
+('Product 652', 'Gadgets', 'tag2', 129.99, 'Brand Gadgets'),
+-- Add more products until 'Product 700'
+('Product 700', 'Gadgets', 'tag50', 85.00, 'Brand Gadgets');
+
+-- Games
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 701', 'Games', 'tag1', 39.99, 'Brand Games'),
+('Product 702', 'Games', 'tag2', 29.00, 'Brand Games'),
+-- Add more products until 'Product 750'
+('Product 750', 'Games', 'tag50', 49.99, 'Brand Games');
+
+-- Accessories
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 751', 'Accessories', 'tag1', 19.99, 'Brand Accessories'),
+('Product 752', 'Accessories', 'tag2', 24.99, 'Brand Accessories'),
+-- Add more products until 'Product 800'
+('Product 800', 'Accessories', 'tag50', 20.00, 'Brand Accessories');
+
+-- Jewelry
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 801', 'Jewelry', 'tag1', 99.99, 'Brand Jewelry'),
+('Product 802', 'Jewelry', 'tag2', 129.00, 'Brand Jewelry'),
+-- Add more products until 'Product 850'
+('Product 850', 'Jewelry', 'tag50', 100.00, 'Brand Jewelry');
+
+-- Tools
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 851', 'Tools', 'tag1', 59.99, 'Brand Tools'),
+('Product 852', 'Tools', 'tag2', 79.99, 'Brand Tools'),
+-- Add more products until 'Product 900'
+('Product 900', 'Tools', 'tag50', 49.00, 'Brand Tools');
+
+-- Garden
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 901', 'Garden', 'tag1', 19.99, 'Brand Garden'),
+('Product 902', 'Garden', 'tag2', 25.00, 'Brand Garden'),
+-- Add more products until 'Product 950'
+('Product 950', 'Garden', 'tag50', 32.50, 'Brand Garden');
+
+-- Office
+INSERT INTO products (product_name, category, tags, price, brand) VALUES
+('Product 951', 'Office', 'tag1', 39.99, 'Brand Office'),
+('Product 952', 'Office', 'tag2', 49.99, 'Brand Office'),
+-- Add more products until 'Product 1000'
+('Product 1000', 'Office', 'tag50', 41.00, 'Brand Office');
+
+
+
+
+
+DO $$ 
+DECLARE
+    i INT;
+    user_id INT;
+    prod_id INT; -- Renamed variable to avoid ambiguity
+    interaction_type VARCHAR(50);
+    interaction_count INT;
+    comment_text TEXT;
+    valid_product_ids INT[];
+    rand_type INT;  -- Variable to store the random type value for interaction
+BEGIN
+    -- Fetch all valid product_ids from the products table
+    SELECT array_agg(product_id) INTO valid_product_ids FROM products;
+
+    FOR i IN 1..100 LOOP
+        -- Randomly select user_id between 1 and 100
+        user_id := floor(random() * 100) + 1;
+        
+        -- Randomly select product_id from the valid product_ids array
+        prod_id := valid_product_ids[floor(random() * array_length(valid_product_ids, 1)) + 1];
+        
+        -- Generate a random number for interaction_type selection
+        rand_type := floor(random() * 4);
+        
+        -- Randomly select interaction_type based on rand_type
+        CASE
+            WHEN rand_type = 0 THEN interaction_type := 'view';
+            WHEN rand_type = 1 THEN interaction_type := 'purchase';
+            WHEN rand_type = 2 THEN interaction_type := 'like';
+            WHEN rand_type = 3 THEN interaction_type := 'comment';
+            ELSE interaction_type := 'view';  -- Default case to handle unexpected situations
+        END CASE;
+        
+        -- For 'comment' interaction_type, set a comment text
+        IF interaction_type = 'comment' THEN
+            comment_text := 'This is a comment for product ' || prod_id;
+        ELSE
+            comment_text := NULL;
+        END IF;
+        
+        -- Set interaction_count (for 'view', 'purchase', 'like' types it's random, for 'comment' it's 1)
+        IF interaction_type = 'comment' THEN
+            interaction_count := 1;
+        ELSE
+            interaction_count := floor(random() * 10) + 1;  -- Random count between 1 and 10
+        END IF;
+        
+        -- Insert data into user_interactions table
+        INSERT INTO user_interactions (user_id, product_id, interaction_type, interaction_count, comment_text)
+        VALUES (user_id, prod_id, interaction_type, interaction_count, comment_text);
+    END LOOP;
+END $$;
+
+
+
+
+
+
+DO $$ 
+DECLARE
+    i INT;
+    product_id INT;
+    influencer_id INT;
+    post_text TEXT;
+    post_likes INT;
+    post_comments INT;
+    valid_influencers INT[];
+    valid_products INT[];
+BEGIN
+    -- Fetch all valid influencer_ids from the influencers table (assuming an influencers table exists)
+    SELECT array_agg(influencer_id) INTO valid_influencers FROM influencers;
+    
+    -- Fetch all valid product_ids from the products table
+    SELECT array_agg(product_id) INTO valid_products FROM products;
+
+    FOR i IN 1..100 LOOP
+        -- Randomly select influencer_id between 1 and the max influencer_id
+        influencer_id := valid_influencers[floor(random() * array_length(valid_influencers, 1)) + 1];
+        
+        -- Randomly select product_id between 1 and the max product_id
+        product_id := valid_products[floor(random() * array_length(valid_products, 1)) + 1];
+        
+        -- Generate random post text (for testing purposes, you can set static text or randomize it)
+        post_text := 'Amazing product ' || product_id || ' promoted by influencer ' || influencer_id;
+        
+        -- Generate random likes and comments
+        post_likes := floor(random() * 1000);  -- Random likes between 0 and 999
+        post_comments := floor(random() * 500);  -- Random comments between 0 and 499
+        
+        -- Insert into influencer_posts table
+        INSERT INTO influencer_posts (product_id, influencer_id, post_text, post_likes, post_comments)
+        VALUES (product_id, influencer_id, post_text, post_likes, post_comments);
+    END LOOP;
+END $$;
+
+
+
+
+-- Insert sample data into influencers table (assuming 20 influencers)
+INSERT INTO influencers (influencer_name, follower_count)
+VALUES
+    ('Influencer 1', 100000),
+    ('Influencer 2', 250000),
+    ('Influencer 3', 30000),
+    ('Influencer 4', 150000),
+    ('Influencer 5', 500000),
+    ('Influencer 6', 20000),
+    ('Influencer 7', 1000000),
+    ('Influencer 8', 70000),
+    ('Influencer 9', 300000),
+    ('Influencer 10', 450000),
+    ('Influencer 11', 120000),
+    ('Influencer 12', 90000),
+    ('Influencer 13', 350000),
+    ('Influencer 14', 60000),
+    ('Influencer 15', 100000),
+    ('Influencer 16', 800000),
+    ('Influencer 17', 200000),
+    ('Influencer 18', 120000),
+    ('Influencer 19', 250000),
+    ('Influencer 20', 700000);
+
+
+
+
+DO $$ 
+DECLARE
+    i INT;
+    prod_id INT; -- Renamed to avoid ambiguity with product_id column
+    infl_id INT; -- Renamed to avoid ambiguity with influencer_id column
+    post_text TEXT;
+    post_likes INT;
+    post_comments INT;
+    valid_influencers INT[];
+    valid_products INT[];
+BEGIN
+    -- Fetch all valid influencer_ids from the influencers table
+    SELECT array_agg(influencer_id) INTO valid_influencers FROM influencers;
+    
+    -- Fetch all valid product_ids from the products table
+    SELECT array_agg(product_id) INTO valid_products FROM products;
+
+    FOR i IN 1..100 LOOP
+        -- Randomly select influencer_id from the valid influencer array
+        infl_id := valid_influencers[floor(random() * array_length(valid_influencers, 1)) + 1];
+        
+        -- Randomly select product_id from the valid product array
+        prod_id := valid_products[floor(random() * array_length(valid_products, 1)) + 1];
+        
+        -- Generate random post text
+        post_text := 'Amazing product ' || prod_id || ' promoted by influencer ' || infl_id;
+        
+        -- Generate random likes and comments
+        post_likes := floor(random() * 1000);  -- Random likes between 0 and 999
+        post_comments := floor(random() * 500);  -- Random comments between 0 and 499
+        
+        -- Insert into influencer_posts table
+        INSERT INTO influencer_posts (product_id, influencer_id, post_text, post_likes, post_comments)
+        VALUES (prod_id, infl_id, post_text, post_likes, post_comments);
+    END LOOP;
+END $$;
+
+
+
+
+
+
+DO $$ 
+DECLARE
+    i INT;
+    v_user_id INT;  -- Renamed variable to avoid ambiguity
+    v_product_id INT;  -- Renamed variable to avoid ambiguity
+    view_count INT;
+    last_viewed TIMESTAMP;
+    valid_user_ids INT[];
+    valid_product_ids INT[];
+BEGIN
+    -- Fetch all valid user_ids from the users table
+    SELECT array_agg(user_id) INTO valid_user_ids FROM users;
+    
+    -- Fetch all valid product_ids from the products table
+    SELECT array_agg(product_id) INTO valid_product_ids FROM products;
+
+    FOR i IN 1..100 LOOP
+        -- Randomly select v_user_id from valid user array
+        v_user_id := valid_user_ids[floor(random() * array_length(valid_user_ids, 1)) + 1];
+        
+        -- Randomly select v_product_id from valid product array
+        v_product_id := valid_product_ids[floor(random() * array_length(valid_product_ids, 1)) + 1];
+        
+        -- Randomly set view_count between 1 and 10
+        view_count := floor(random() * 10) + 1;
+        
+        -- Randomly generate last_viewed timestamp (within the past 30 days)
+        last_viewed := NOW() - (floor(random() * 30) || ' days')::INTERVAL;
+
+        -- Insert data into product_views table
+        INSERT INTO product_views (product_id, user_id, view_count, last_viewed)
+        VALUES (v_product_id, v_user_id, view_count, last_viewed);
+    END LOOP;
+END $$;
+
+
+
+
+
+
+DO $$ 
+DECLARE
+    i INT;
+    v_user_id INT;  -- Renamed variable to avoid ambiguity
+    v_product_id INT;  -- Renamed variable to avoid ambiguity
+    purchase_count INT;
+    last_purchased TIMESTAMP;
+    valid_user_ids INT[];
+    valid_product_ids INT[];
+BEGIN
+    -- Fetch all valid user_ids from the users table
+    SELECT array_agg(user_id) INTO valid_user_ids FROM users;
+    
+    -- Fetch all valid product_ids from the products table
+    SELECT array_agg(product_id) INTO valid_product_ids FROM products;
+
+    FOR i IN 1..100 LOOP
+        -- Randomly select v_user_id from valid user array
+        v_user_id := valid_user_ids[floor(random() * array_length(valid_user_ids, 1)) + 1];
+        
+        -- Randomly select v_product_id from valid product array
+        v_product_id := valid_product_ids[floor(random() * array_length(valid_product_ids, 1)) + 1];
+        
+        -- Randomly set purchase_count between 1 and 5
+        purchase_count := floor(random() * 5) + 1;
+        
+        -- Randomly generate last_purchased timestamp (within the past 60 days)
+        last_purchased := NOW() - (floor(random() * 60) || ' days')::INTERVAL;
+
+        -- Insert data into product_purchases table
+        INSERT INTO product_purchases (product_id, user_id, purchase_count, last_purchased)
+        VALUES (v_product_id, v_user_id, purchase_count, last_purchased);
+    END LOOP;
+END $$;
+
